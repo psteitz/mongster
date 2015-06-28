@@ -1,0 +1,25 @@
+extends layout
+block head
+  link(rel='stylesheet', href='/javascripts/vendor/bootstrap-css/css/bootstrap.css')
+  script(type='text/javascript', src='/javascripts/controllers/MessageListController.js')
+block content
+  div.container(ng.app="mongsterVueApp", ng-controller="MessageListController", ng-init="setMessages( #{JSON.stringify(messages)} )")
+    h1 Messages Sent
+      h2
+      div.row(ng-repeat="message in messages" track by message._id)
+        div.row
+          .col-md-3
+            {{message.date}}
+          .col-md-1
+            {{message.subject}}
+          .col-md-2
+            {{message.to[0]}} {{message.to[1]}} {{message.to[2]}}
+          .col-md-1
+            from: {{message.cc[0]}} {{message.cc[1]}} {{message.cc[2]}}
+          .col-md-2
+            {{message.from}}
+          .col-md-1
+            {{message.replyto}}
+          .col-md-3
+            {{message.body}}
+

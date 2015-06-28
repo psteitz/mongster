@@ -1,0 +1,5 @@
+mongsterVue/node_modules/
+mongsterVue/public/javascripts/vendor/
+mongsterServer/target
+mongsterServer/.project
+

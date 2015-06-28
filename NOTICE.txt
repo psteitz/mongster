@@ -1,0 +1,6 @@
+Mongster
+
+This software extends SubEthaSMTP / Wiser
+(https://github.com/voodoodyne/subethasmtp).
+
+The unit tests include code adapted from the Wiser unit tests.
