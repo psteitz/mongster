@@ -87,7 +87,7 @@ The following instructions are for Ubuntu Linux, though modulo the  [this issue]
    ```
    sudo node app.js
    ```
-   The `sudo` in the launch command is necessary because MongoVue starts a Mongster server, which by default binds to port 25, which is a privileged port.  (FIXME: expose Mongster port config to MongoVue)
+   The `sudo` in the launch command is necessary because MongoVue starts a Mongster server, which by default binds to port 25, which is a privileged port.  ([FIXME] (https://github.com/psteitz/mongster/issues/2)) to avoid this ugliness.
    
    
 If you point a browser at http://localhost:3000 you should see a screen with an empty messages table.  To get some messages to appear, you need to direct some outbound SMTP messages to port 25 on the local host.  To stop the server (sic) kill the process.
