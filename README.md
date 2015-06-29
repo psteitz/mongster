@@ -9,7 +9,7 @@ There are actually two little projects living here:
 * MongsterVue - a MEAN app for managing and viewing contents of a Mongster server
 
 ## Building ##
-To build the mongster server, run `mvn clean package` to get a jar suitable for inclusion
+To build the mongster server, run `mvn clean package` from `/monsgterServer` to get a jar suitable for inclusion
 in a Java project or `mvn clean compile assembly:single` to get a standalone jar.  For the build to work, you need to have a JDK
 (at least 1.7) and [maven](http://maven.apache.org) installed.
 
@@ -95,12 +95,14 @@ If you point a browser at http://localhost:3000 you should see a screen with an 
 ## Collaboration ##
 Discussion happens on the [Mongster Forum](http://ost.io/@psteitz/mongster)
 
-[Pull requests](https://github.com/pulls) and [issues](https://github.com/issues) welcome!
+[Pull requests](https://github.com/psteitz/mongster/pulls) and [issues](https://github.com/psteitz/mongster/issues) welcome!
 
-Here are some easy issues to talk about / get started with:
+Here are [some easy issues](https://github.com/psteitz/mongster/issues?q=is%3Aopen+is%3Aissue+label%3Aeasy) to talk about / get started with.
 
 
-And here is a bigger one, which should not be that hard; but will be a fair amount of work:
+And here is [a bigger one](https://github.com/psteitz/mongster/issues/7), which should not be that hard; but will be a fair amount of work.
+
+Patches welcome!
 
 ## License ##
 Apache Software License, version 2.0
