@@ -9,7 +9,7 @@ There are actually two little projects living here:
 * MongsterVue - a MEAN app for managing and viewing contents of a Mongster server
 
 ## Building ##
-To build the mongster server, run `mvn clean package` from `/monsgterServer` to get a jar suitable for inclusion
+To build the mongster server, run `mvn clean package` from `/mongsterServer` to get a jar suitable for inclusion
 in a Java project or `mvn clean compile assembly:single` to get a standalone jar.  For the build to work, you need to have a JDK
 (at least 1.7) and [maven](http://maven.apache.org) installed.
 
