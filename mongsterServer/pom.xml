@@ -47,7 +47,7 @@
       <configuration>
         <archive>
           <manifest>
-            <mainClass>org..mongster.Mongster</mainClass>
+            <mainClass>org.mongster.Mongster</mainClass>
           </manifest>
         </archive>
         <descriptorRefs>
