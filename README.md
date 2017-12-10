@@ -17,7 +17,7 @@ As a MEAN app, there is no special build step required for MongsterVue. See info
 however, on requirements for the node environment to run MongsterVue.
 
 ## Running ##
-###Mongster Server###
+### Mongster Server ###
 You can start a Monsgter server from Java code by instantiating a Mongster and invoking
 its `start()` method.  Executing `java -jar <path-to-standalone-jar>` from the command line will
 also start a Mongster server.  In both cases, a MongoDB server must be running with the 
@@ -39,7 +39,7 @@ constructor takes an optional `MongsterConfig` argument that allows all of these
 to be configured.  There is also an `inMemory` config parameter that allows in-memory
 storage of messages (as `WiserMessages`) to be turned on / off.  The default is on.
 
-###MongsterVue###
+### MongsterVue ###
 The following instructions are for Ubuntu Linux, though modulo the  [this issue](https://github.com/joeferner/node-java/issues/90#issuecomment-45613235), they should in general work for Mac OSX using brew in place of apt-get.  
 
 1. Install and start mongo 
@@ -50,8 +50,7 @@ The following instructions are for Ubuntu Linux, though modulo the  [this issue]
 2. Install node 
 
    ```
-  curl --silent --location https://deb.nodesource.com/setup_0.12 | sudo bash -
-   sudo apt-get install --yes nodejs
+   curl --silent --location https://deb.nodesource.com/setup_0.12 | sudo bash -sudo apt-get install --yes nodejs
    ```
 3. Install bower
 
@@ -88,8 +87,7 @@ The following instructions are for Ubuntu Linux, though modulo the  [this issue]
    ```
    sudo node app.js
    ```
-   The `sudo` in the launch command is necessary because MongoVue starts a Mongster server, which by default binds to port 25, which is a privileged port.  [FIXME] (https://github.com/psteitz/mongster/issues/2) to avoid this ugliness.
-   
+The `sudo` in the launch command is necessary because MongoVue starts a Mongster server, which by default binds to port 25, which is a privileged port.  [FIXME] (https://github.com/psteitz/mongster/issues/2) to avoid this ugliness.   
    
 If you point a browser at http://localhost:3000 you should see a screen with an empty messages table.  To get some messages to appear, you need to direct some outbound SMTP messages to port 25 on the local host.  To stop the server (sic) kill the process.
 
@@ -100,7 +98,6 @@ Discussion happens on the [Mongster Forum](http://ost.io/@psteitz/mongster)
 
 Here are [some easy issues](https://github.com/psteitz/mongster/issues?q=is%3Aopen+is%3Aissue+label%3Aeasy) to talk about / get started with.
 
-
 And here is [a bigger one](https://github.com/psteitz/mongster/issues/7), which should not be that hard; but will be a fair amount of work.
 
 Patches welcome!
@@ -109,6 +106,3 @@ Patches welcome!
 Apache Software License, version 2.0
 
 All pull requests must be licensable under this license and are assumed to be granted to the project under terms described in the [Apache Individual Contributor License Agreement] (https://www.apache.org/licenses/icla.txt).
-
-
- 
