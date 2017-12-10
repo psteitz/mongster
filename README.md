@@ -38,6 +38,7 @@ Monsgster will try to create the database and collection if they do not already 
 constructor takes an optional `MongsterConfig` argument that allows all of these properties
 to be configured.  There is also an `inMemory` config parameter that allows in-memory
 storage of messages (as `WiserMessages`) to be turned on / off.  The default is on.
+
 ###MongsterVue###
 The following instructions are for Ubuntu Linux, though modulo the  [this issue](https://github.com/joeferner/node-java/issues/90#issuecomment-45613235), they should in general work for Mac OSX using brew in place of apt-get.  
 
