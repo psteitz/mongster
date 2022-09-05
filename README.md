@@ -92,7 +92,6 @@ The `sudo` in the launch command is necessary because MongoVue starts a Mongster
 If you point a browser at http://localhost:3000 you should see a screen with an empty messages table.  To get some messages to appear, you need to direct some outbound SMTP messages to port 25 on the local host.  To stop the server (sic) kill the process.
 
 ## Collaboration ##
-Discussion happens on the [Mongster Forum](http://ost.io/@psteitz/mongster)
 
 [Pull requests](https://github.com/psteitz/mongster/pulls) and [issues](https://github.com/psteitz/mongster/issues) welcome!
 
