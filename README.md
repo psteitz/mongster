@@ -11,7 +11,14 @@ There are actually two little projects living here:
 ## Building ##
 To build the mongster server, run `mvn clean package` from `/mongsterServer` to get a jar suitable for inclusion
 in a Java project or `mvn clean compile assembly:single` to get a standalone jar.  For the build to work, you need to have a JDK
-(at least 1.7) and [maven](http://maven.apache.org) installed.
+(at least 17) and [maven](http://maven.apache.org) installed.
+
+### Tests ###
+The Mongster server unit tests (JUnit 6) use [Testcontainers](https://testcontainers.com) to start a throwaway
+MongoDB 7.0 server in a Docker container, so no locally running MongoDB is needed.  A working Docker
+(or Docker-compatible) environment is required instead; the first run will pull the `mongo:7.0` image.
+Run the tests with `mvn test` from `/mongsterServer`.  Because `mvn package` and `mvn install` also run the tests,
+use `-DskipTests` with them if Docker is not available.
 
 As a MEAN app, there is no special build step required for MongsterVue. See info below,
 however, on requirements for the node environment to run MongsterVue.
@@ -69,7 +76,7 @@ The following instructions are for Ubuntu Linux, though modulo the  [this issue]
 
    The goal here is just to copy a standalone Mongster jar to `/monsgsterVue.`  That can be from a release or built from the Java sources.  To build from Java sources:
    
-   Make sure `$jAVA_HOME` is set to point to a JDK 1.7+.  If maven is not installed, install it:
+   Make sure `$jAVA_HOME` is set to point to a JDK 17+.  If maven is not installed, install it:
    
    ```
    sudo apt-get install maven

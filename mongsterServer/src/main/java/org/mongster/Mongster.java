@@ -29,7 +29,8 @@ import org.bson.Document;
 import org.subethamail.wiser.Wiser;
 import org.subethamail.wiser.WiserMessage;
 
-import com.mongodb.MongoClient;
+import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
@@ -146,7 +147,7 @@ public class Mongster extends Wiser {
         public PersistedMessageList(boolean inMemory, String mongoHost, int mongoPort,
                                     String mongoDatabase, String mongoCollection) {
             this.mongoCollection = mongoCollection;
-            mongoClient = new MongoClient(mongoHost);
+            mongoClient = MongoClients.create("mongodb://" + mongoHost + ":" + mongoPort);
             try {
                 db = mongoClient.getDatabase(mongoDatabase);
             } catch (Exception ex) {
@@ -224,7 +225,7 @@ public class Mongster extends Wiser {
             if (inMemory) {
                 return super.size();
             } else {
-                return (int) db.getCollection("messages").count();
+                return (int) db.getCollection("messages").countDocuments();
             }
         }
         

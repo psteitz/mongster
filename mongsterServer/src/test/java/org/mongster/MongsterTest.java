@@ -18,14 +18,18 @@ import javax.mail.util.ByteArrayDataSource;
 
 import org.apache.commons.codec.binary.Base64;
 import org.bson.Document;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.mongster.Mongster;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.subethamail.wiser.WiserMessage;
+import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.utility.DockerImageName;
 
-import com.mongodb.MongoClient;
+import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoClients;
 
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Sorts.*;
@@ -36,29 +40,40 @@ import com.mongodb.client.MongoDatabase;
 /**
  * Unit tests for Mongster.  Most test cases are adapted from Wiser unit tests.
  * 
- * NOTE: there must be a MongoDB server running with the given config for these
- * test cases to run.
- * 
- * FIXME: externalize the MongoDB config.
- * 
+ * NOTE: a MongoDB server is started in a Docker container using Testcontainers,
+ * so a Docker environment must be available, but no local MongoDB is required.
  */
 public class MongsterTest {
 
     public static final int PORT = 2566;
-    public static final String MONGO_HOST = "localhost";
     public static final String MONGO_DATABASE = "mongster";
     public static final String MONGO_COLLECTION = "messages";
-    public static final int MONGO_PORT = 27017;
-    
+
+    @SuppressWarnings("resource") // started in setUpClass and stopped in tearDownClass
+    public static final GenericContainer<?> MONGO =
+        new GenericContainer<>(DockerImageName.parse("mongo:7.0")).withExposedPorts(27017);
+
+    @BeforeAll
+    public static void setUpClass() {
+        MONGO.start();
+    }
+
+    @AfterAll
+    public static void tearDownClass() {
+        MONGO.stop();
+    }
+
     private MongoDatabase db;
     private MongoClient mongoClient;
 
     protected Mongster mongster;
     protected Session session;
 
-    @Before
+    @BeforeEach
     public void setUp() throws Exception {
-        mongoClient = new MongoClient(MONGO_HOST);
+        String mongoHost = MONGO.getHost();
+        int mongoPort = MONGO.getMappedPort(27017);
+        mongoClient = MongoClients.create("mongodb://" + mongoHost + ":" + mongoPort);
         try {
             db = mongoClient.getDatabase(MONGO_DATABASE);
         } catch (Exception ex) {
@@ -68,13 +83,18 @@ public class MongsterTest {
         props.setProperty("mail.smtp.host", "localhost");
         props.setProperty("mail.smtp.port", Integer.toString(PORT));
         session = Session.getInstance(props);
-        mongster = new Mongster();
-        mongster.setPort(PORT);
+        MongsterConfig config = new MongsterConfig();
+        config.setMongoHost(mongoHost);
+        config.setMongoPort(mongoPort);
+        config.setMongoDatabase(MONGO_DATABASE);
+        config.setMongoCollection(MONGO_COLLECTION);
+        config.setSmtpPort(PORT);
+        mongster = new Mongster(config);
         mongster.start();
         mongster.clear();
     }
 
-    @After
+    @AfterEach
     public void tearDown() throws Exception {
         mongster.stop();
         mongster.clear();
@@ -89,16 +109,16 @@ public class MongsterTest {
         message.setSubject("barf");
         message.setText("body");
         Transport.send(message);
-        Assert.assertEquals(1, mongster.getMessages().size());
+        Assertions.assertEquals(1, mongster.getMessages().size());
         String[] receivedHeaders = mongster.getMessages().get(0).getMimeMessage().getHeader("Received");
-        Assert.assertEquals(1, receivedHeaders.length);
+        Assertions.assertEquals(1, receivedHeaders.length);
         MongoCollection<Document> coll = db.getCollection(MONGO_COLLECTION);
-        Assert.assertEquals(1,coll.count());
+        Assertions.assertEquals(1,coll.countDocuments());
         Document doc = coll.find().first();
-        Assert.assertTrue(doc.getString("received").indexOf("from") >= 0);
-        Assert.assertTrue(doc.getString("from").indexOf("someone@somewhereelse.com") >= 0);
-        Assert.assertTrue(doc.getString("to").indexOf("anyone@anywhere.com") >= 0);
-        Assert.assertTrue(doc.getString("body").indexOf("body") >= 0);
+        Assertions.assertTrue(doc.getString("received").indexOf("from") >= 0);
+        Assertions.assertTrue(doc.getString("from").indexOf("someone@somewhereelse.com") >= 0);
+        Assertions.assertTrue(doc.getString("to").indexOf("anyone@anywhere.com") >= 0);
+        Assertions.assertTrue(doc.getString("body").indexOf("body") >= 0);
     }
 
     @Test
@@ -115,7 +135,7 @@ public class MongsterTest {
 
         Transport.send(message);
 
-        Assert.assertEquals(2, mongster.getMessages().size());
+        Assertions.assertEquals(2, mongster.getMessages().size());
     }
 
     @Test
@@ -133,11 +153,11 @@ public class MongsterTest {
 
         Transport.send(message);
 
-        Assert.assertEquals(2, mongster.getMessages().size());
+        Assertions.assertEquals(2, mongster.getMessages().size());
 
-        Assert.assertEquals("barf", mongster.getMessages().get(0)
+        Assertions.assertEquals("barf", mongster.getMessages().get(0)
             .getMimeMessage().getSubject());
-        Assert.assertEquals("barf", mongster.getMessages().get(1)
+        Assertions.assertEquals("barf", mongster.getMessages().get(1)
             .getMimeMessage().getSubject());
     }
 
@@ -150,7 +170,7 @@ public class MongsterTest {
         String body = "\u00a4uro ma\u00f1ana\r\n";
         this.testEightBitMessage(body, "UTF-8");
 
-        Assert.assertEquals(body, mongster.getMessages().get(0)
+        Assertions.assertEquals(body, mongster.getMessages().get(0)
             .getMimeMessage().getContent());
     }
 
@@ -164,7 +184,7 @@ public class MongsterTest {
                                          // tilde)
         this.testEightBitMessage(body, "ISO-8859-1");
 
-        Assert.assertEquals(body, mongster.getMessages().get(0)
+        Assertions.assertEquals(body, mongster.getMessages().get(0)
             .getMimeMessage().getContent());
     }
 
@@ -177,7 +197,7 @@ public class MongsterTest {
         String body = "\u0080uro\r\n"; // should be the euro symbol
         this.testEightBitMessage(body, "ISO-8859-15");
 
-        Assert.assertEquals(body, mongster.getMessages().get(0)
+        Assertions.assertEquals(body, mongster.getMessages().get(0)
             .getMimeMessage().getContent());
     }
 
@@ -201,7 +221,7 @@ public class MongsterTest {
                                                             // letters
         this.testEightBitMessage(body, "iso-2022-jp");
 
-        Assert.assertEquals(body, mongster.getMessages().get(0)
+        Assertions.assertEquals(body, mongster.getMessages().get(0)
             .getMimeMessage().getContent());
     }
 
@@ -234,35 +254,35 @@ public class MongsterTest {
         }
         in.close();
 
-        Assert.assertTrue(Arrays.equals(body, tmp.toByteArray()));
+        Assertions.assertTrue(Arrays.equals(body, tmp.toByteArray()));
     }
     
     @Test
     public void testClear() throws Exception {
         sendMessageSequence(10);
-        Assert.assertEquals(10, mongster.getMessages().size());
+        Assertions.assertEquals(10, mongster.getMessages().size());
         MongoCollection<Document> coll = db.getCollection(MONGO_COLLECTION);
-        Assert.assertEquals(10,coll.count());
+        Assertions.assertEquals(10,coll.countDocuments());
         mongster.clear();
-        Assert.assertEquals(0, mongster.getMessages().size());
+        Assertions.assertEquals(0, mongster.getMessages().size());
         coll = db.getCollection(MONGO_COLLECTION);
-        Assert.assertEquals(0,coll.count());
+        Assertions.assertEquals(0,coll.countDocuments());
     }
     
     @Test
     public void testTruncate() throws Exception {
         sendMessageSequence(10);
-        Assert.assertEquals(10, mongster.getMessages().size());
+        Assertions.assertEquals(10, mongster.getMessages().size());
         MongoCollection<Document> coll = db.getCollection(MONGO_COLLECTION);
-        Assert.assertEquals(10,coll.count());
+        Assertions.assertEquals(10,coll.countDocuments());
         mongster.truncate(5);
         final List<WiserMessage> messageList = mongster.getMessages();
-        Assert.assertEquals(5, messageList.size());
-        Assert.assertTrue(messageList.get(4).getMimeMessage().getSubject().equals("barf4"));
+        Assertions.assertEquals(5, messageList.size());
+        Assertions.assertTrue(messageList.get(4).getMimeMessage().getSubject().equals("barf4"));
         coll = db.getCollection(MONGO_COLLECTION);
-        Assert.assertEquals(5,coll.count());
+        Assertions.assertEquals(5,coll.countDocuments());
         Document doc  = coll.find(exists("sequenceNumber")).sort(descending("sequenceNumber")).first();
-        Assert.assertTrue(doc.getString("subject").equals("barf4"));
+        Assertions.assertTrue(doc.getString("subject").equals("barf4"));
     }
     
     @Test
@@ -271,29 +291,29 @@ public class MongsterTest {
         MongoCollection<Document> coll = db.getCollection(MONGO_COLLECTION);
         mongster.tail(5);
         final List<WiserMessage> messageList = mongster.getMessages();
-        Assert.assertEquals(5, messageList.size());
-        Assert.assertTrue(messageList.get(4).getMimeMessage().getSubject().equals("barf9"));
+        Assertions.assertEquals(5, messageList.size());
+        Assertions.assertTrue(messageList.get(4).getMimeMessage().getSubject().equals("barf9"));
         coll = db.getCollection(MONGO_COLLECTION);
-        Assert.assertEquals(5,coll.count());
+        Assertions.assertEquals(5,coll.countDocuments());
         Document doc  = coll.find(exists("sequenceNumber")).sort(descending("sequenceNumber")).first();
-        Assert.assertTrue(doc.getString("subject").equals("barf9"));
+        Assertions.assertTrue(doc.getString("subject").equals("barf9"));
         long val = doc.getLong("sequenceNumber");
-        Assert.assertEquals(4, val );
+        Assertions.assertEquals(4, val );
     }
     
     @Test
     public void testDecodeMongoMimeMessage() throws Exception {
         sendMessageSequence(1);
         MongoCollection<Document> coll = db.getCollection(MONGO_COLLECTION);
-        Assert.assertEquals(1,coll.count());
+        Assertions.assertEquals(1,coll.countDocuments());
         Document doc  = coll.find().first();
         Base64 codec = new Base64();
         MimeMessage mimeMessage = new MimeMessage(Session.getDefaultInstance(new Properties()),
                                                   new ByteArrayInputStream(codec.decode(doc.getString("bytes64"))));
-        Assert.assertTrue(mimeMessage.getContent().toString().startsWith("text0"));
-        Assert.assertTrue(mimeMessage.getSubject().toString().equals("barf0"));
-        Assert.assertTrue(mimeMessage.getFrom()[0].toString().equals("someone@somewhereelse.com"));
-        Assert.assertTrue(mimeMessage.getAllRecipients()[0].toString().equals("anyone@anywhere.com"));
+        Assertions.assertTrue(mimeMessage.getContent().toString().startsWith("text0"));
+        Assertions.assertTrue(mimeMessage.getSubject().toString().equals("barf0"));
+        Assertions.assertTrue(mimeMessage.getFrom()[0].toString().equals("someone@somewhereelse.com"));
+        Assertions.assertTrue(mimeMessage.getAllRecipients()[0].toString().equals("anyone@anywhere.com"));
     }
     
     private void sendMessageSequence(int numMessages) throws Exception {
