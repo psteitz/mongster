@@ -3,12 +3,11 @@
  * with messages in scope.
  */
 exports.index = function(Mail) {
-  return function(req, res) {
-    Mail.find({}, function(error, messages) {
-      res.render('index', {
-        title: 'mongsterVue',
-        messages : messages
-      });
+  return async function(req, res) {
+    const messages = await Mail.find({});
+    res.render('index', {
+      title: 'mongsterVue',
+      messages : messages
     });
   };
 };
@@ -17,16 +16,15 @@ exports.index = function(Mail) {
  * Dumps all messages to response stream as json.
  */
 exports.get = function(Mail) {
-  return function(req, res) {
-    Mail.find({}, function(error, messages) {
-      res.json({messages : messages});
-    });
-  }
+  return async function(req, res) {
+    const messages = await Mail.find({});
+    res.json({messages : messages});
+  };
 };
 
 exports.clear = function(smtpServer) {
-  return function(req, res) {
-    smtpServer.clear();
-    res.send(200);
-  }
-}
+  return async function(req, res) {
+    await smtpServer.clear();
+    res.sendStatus(200);
+  };
+};

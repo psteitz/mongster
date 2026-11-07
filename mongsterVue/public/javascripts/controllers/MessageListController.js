@@ -1,6 +1,5 @@
-var mongsterVueApp = angular.module('mongsterVueApp', ['ui.bootstrap']);
-mongsterVueApp.controller('MessageListController', ['$scope','$http', function($scope, $http) {
-  
+angular.module('mongsterVueApp').controller('MessageListController', ['$scope', '$http', '$interval', function($scope, $http, $interval) {
+
   $scope.messages = [];
 
   $scope.setMessages = function(messages) {
@@ -8,25 +7,23 @@ mongsterVueApp.controller('MessageListController', ['$scope','$http', function($
   };
 
   $scope.updateList = function() {
-    $http.get('/messages.json').success(function(data) {
-      $scope.messages = data.messages;
+    return $http.get('/messages.json').then(function(response) {
+      $scope.messages = response.data.messages;
     });
   };
 
-  setInterval(function() {
-    $scope.updateList();
-    $scope.$apply();
-  }, 30 * 1000); // update every 30 seconds
+  var timer = $interval($scope.updateList, 30 * 1000); // update every 30 seconds
+  $scope.$on('$destroy', function() {
+    $interval.cancel(timer);
+  });
 
   $scope.updateList();
 
   $scope.clear = function() {
-    $http.post('/clear').success(function(data) {
+    return $http.post('/clear').then(function() {
       console.log("Cleared");
-      $scope.updateList();
-      $scope.$apply();
+      return $scope.updateList();
     });
   };
 
 }]);
-

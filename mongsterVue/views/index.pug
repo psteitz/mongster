@@ -1,9 +1,9 @@
 extends layout
 block head
-  link(rel='stylesheet', href='/javascripts/vendor/bootstrap-css/css/bootstrap.css')
+  link(rel='stylesheet', href='/javascripts/vendor/bootstrap/css/bootstrap.css')
   script(type='text/javascript', src='/javascripts/controllers/MessageListController.js')
 block content
-  div.container(ng.app="mongsterVueApp", ng-controller="MessageListController", ng-init="setMessages( #{JSON.stringify(messages)} )")
+  div.container(ng-controller="MessageListController", ng-init="setMessages(" + JSON.stringify(messages) + ")")
     h1 Messages Sent
       h5
         .col-md-12.data
@@ -19,7 +19,7 @@ block content
                   th ReplyTo
                   th Message body
               tbody
-                tr(ng-repeat="message in messages" track by message._id)
+                tr(ng-repeat="message in messages track by message._id")
                   td {{message.date}}
                   td {{message.subject}}
                   td {{message.to[0]}} {{message.to[1]}} {{message.to[2]}}

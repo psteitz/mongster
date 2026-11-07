@@ -49,34 +49,27 @@ storage of messages (as `WiserMessages`) to be turned on / off.  The default is 
 ### MongsterVue ###
 The following instructions are for Ubuntu Linux, though modulo the  [this issue](https://github.com/joeferner/node-java/issues/90#issuecomment-45613235), they should in general work for Mac OSX using brew in place of apt-get.  
 
-1. Install and start mongo 
-   
-   ```
-   sudo apt-get install mongodb-server
-   ```
-2. Install node 
+1. Install and start MongoDB (see the [MongoDB installation docs](https://www.mongodb.com/docs/manual/installation/))
+2. Install Node.js 22.22.2 or later (24 LTS recommended)
 
    ```
-   curl --silent --location https://deb.nodesource.com/setup_0.12 | sudo bash -sudo apt-get install --yes nodejs
+   curl -fsSL https://deb.nodesource.com/setup_24.x | sudo -E bash -
+   sudo apt-get install -y nodejs
    ```
-3. Install bower
+3. Install MongsterVue dependencies (from `/mongsterVue` relative to the top-level directory of a clone of this repo).
+   The `java` module is built from source and links against whichever JVM `$JAVA_HOME` points to at install time, so
+   `$JAVA_HOME` must point to a JDK 17+ (the native bridge is unusable with the Mongster jar otherwise) and `g++`, `make`
+   and `python3` are needed.  All dependency versions are pinned exactly in `package.json`; there is no separate bower step.
 
    ```
-   sudo npm install bower -g
-   ``` 
-    
-4. Install MongoVue dependencies (from `/mongsterVue` relative to the top-level directory of a clone of this repo)
+   npm install
+   ```
 
-   ```
-   bower install
-   npm install -d
-   ```
-   
-5. Install Mongster (from `/mongsterServer`)
+4. Install Mongster (from `/mongsterServer`)
 
    The goal here is just to copy a standalone Mongster jar to `/monsgsterVue.`  That can be from a release or built from the Java sources.  To build from Java sources:
    
-   Make sure `$jAVA_HOME` is set to point to a JDK 17+.  If maven is not installed, install it:
+   Make sure `$JAVA_HOME` is set to point to a JDK 17+.  If maven is not installed, install it:
    
    ```
    sudo apt-get install maven
@@ -89,14 +82,28 @@ The following instructions are for Ubuntu Linux, though modulo the  [this issue]
    cp target/*.jar ../mongsterVue
    ```
 
-6. Start MongoVue (from `/mongsterVue`)
+5. Start MongoVue (from `/mongsterVue`)
 
    ```
    sudo node app.js
    ```
 The `sudo` in the launch command is necessary because MongoVue starts a Mongster server, which by default binds to port 25, which is a privileged port.  [FIXME] (https://github.com/psteitz/mongster/issues/2) to avoid this ugliness.   
    
+MongsterVue can be configured with environment variables: `PORT` (web port, default 3000), `SMTP_PORT` (default 25, so a
+non-privileged port can be used without `sudo`), `MONGO_URL` (default `mongodb://localhost:27017/mongster`) and `MONGSTER_JAR`
+(path to the standalone Mongster jar, default the jar in `/mongsterVue`).  The jar in `/mongsterVue` must be built from the
+current sources to work with current MongoDB servers.
+
 If you point a browser at http://localhost:3000 you should see a screen with an empty messages table.  To get some messages to appear, you need to direct some outbound SMTP messages to port 25 on the local host.  To stop the server (sic) kill the process.
+
+#### MongsterVue tests ####
+Run `npm test` from `/mongsterVue`.  The tests cover the Express routes, the AngularJS controller, the rendered page (in jsdom)
+and the Mongoose model.  Like the server tests, they use Testcontainers to start a MongoDB container, so Docker is required
+(or set `MONGO_URL`, e.g. `mongodb://localhost:27017`, to use an existing MongoDB server).  The end-to-end test, which sends mail
+through the real Mongster server via the Java bridge, needs a standalone jar: build it with `mvn compile assembly:single` in
+`/mongsterServer` (the test is skipped if the jar is not found; set `MONGSTER_JAR` to use a different jar).  It also needs the
+same JDK 17+ that `$JAVA_HOME` pointed to when `npm install` built the `java` module; a mismatch causes an
+`UnsupportedClassVersionError` when the jar is loaded.
 
 ## Collaboration ##
 
