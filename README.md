@@ -92,11 +92,10 @@ The following instructions are for Ubuntu Linux, though modulo the  [this issue]
    ```
 The `java` module needs `$JAVA_HOME` to point to a JDK 17+.  All dependency versions are pinned exactly in `package.json`.  
 
-MonsgterView can be configured with environment variables: `PORT` (API server port, default 3001), `SMTP_PORT` (default 25, so a
-non-privileged port can be used without `sudo`), `MONGO_URL` (default `mongodb://localhost:27017/mongster`) and `MONGSTER_JAR`
+MonsgterView can be configured with environment variables: `PORT` (API server port, default 3001), `SMTP_PORT` (default 2567 for testing without sudo - change to 25 if you want to use the standard SMTP port), `MONGO_URL` (default `mongodb://localhost:27017/mongster`) and `MONGSTER_JAR`
 (path to the standalone Mongster jar).
 
-If you point a browser at http://localhost:3000 you should see a screen with an empty messages table.  To get some messages to appear, you need to direct some outbound SMTP messages to port 25 on the local host.
+If you point a browser at http://localhost:3000 you should see a screen with an empty messages table.  To get some messages to appear, configure your mail-sending application to send outbound SMTP messages to port **2567** on localhost (the default testing port), or use `SMTP_PORT=25` if mongsterServer is running without privilege restrictions.
 
 #### MonsgterView tests ####
 Run `npm test` from `/monsgterView`.  The tests cover the React components, API client, the rendered page (in happy-dom)
