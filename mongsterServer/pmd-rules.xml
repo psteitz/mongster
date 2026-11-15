@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- PMD Ruleset for Mongster project -->
+<!-- This ruleset is intentionally permissive to avoid noise from acceptable patterns -->
+
+<ruleset name="Mongster Project Ruleset">
+    <!-- Exclude code style rules that are too strict for this project -->
+    
+    <!-- Best Practices - allow common Java patterns -->
+    <rule ref="category/java/bestpractices.xml">
+        <!-- Disable unused parameter warnings - we use (seq) intentionally to match MongoDB cursor patterns -->
+        <exclude name="UnusedFormalParameter"/>
+        <!-- Disable empty catch block - we log exceptions -->
+        <exclude name="EmptyCatchBlock"/>
+    </rule>
+    
+    <!-- Code Style - focus on critical issues only -->
+    <rule ref="category/java/codestyle.xml">
+        <!-- Allow empty else blocks when used for clarity -->
+        <exclude name="EmptyControlStatement"/>
+    </rule>
+    
+    <!-- Imports - clean imports are important -->
+    <rule ref="category/java/imports.xml"/>
+    
+    <!-- Error Prone - keep these, they catch real bugs -->
+    <rule ref="category/java/errorprone.xml">
+        <!-- These are critical -->
+    </rule>
+    
+    <!-- Keep unnecessary import check -->
+    <rule ref="category/java/design.xml">
+        <!-- Disable unnused private method checks -->
+        <exclude name="UnusedPrivateMethod"/>
+    </rule>
+</ruleset>

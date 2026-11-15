@@ -1,0 +1,79 @@
+<?xml version="1.0"?>
+<!DOCTYPE module PUBLIC
+    "-//Checkstyle//DTD Checkstyle Configuration 1.3//EN"
+    "https://checkstyle.org/dtds/configuration_1_3.dtd">
+
+<module name="Checker">
+    <property name="charset" value="UTF-8"/>
+    <property name="severity" value="error"/>
+    <property name="fileExtensions" value="*.java, *.xml, *.properties"/>
+
+    <!-- Run before everything else -->
+    <module name="BeforeExecutionExclusionFileFilter">
+        <property name="fileNamePattern" value="^CVS$|\.svn$|\.git$|\.flattened-pom.xml$" />
+    </module>
+
+    <!-- Whitespace and formatting -->
+    <module name="LineLength">
+        <property name="max" value="120"/>
+        <property name="tabWidth" value="4"/>
+        <property name="ignorePattern" value="^ *$$|^\s*$"/>
+    </module>
+
+    <!-- TreeWalker with basic checks -->
+    <module name="TreeWalker">
+        <!-- Import order -->
+        <module name="AvoidStarImport"/>
+        <module name="RedundantImport"/>
+        <module name="UnusedImports"/>
+
+        <!-- Package declarations -->
+        <module name="PackageDeclaration"/>
+
+        <!-- Naming conventions -->
+        <module name="AbbreviationAsWordInName">
+            <property name="allowedAbbreviationLength" value="3"/>
+            <property name="ignoreFinal" value="true"/>
+        </module>
+
+        <module name="LocalVariableName">
+            <property name="format" value="^[a-z][a-zA-Z0-9_]*$"/>
+        </module>
+
+        <module name="ParameterName">
+            <property name="format" value="[a-z][a-zA-Z0-9]*"/>
+        </module>
+
+        <!-- Javadoc - remove scope property -->
+        <module name="JavadocMethod">
+            <property name="validateThrows" value="false"/>
+        </module>
+
+        <module name="MissingJavadocType"/>
+
+        <!-- Best practices -->
+        <module name="AvoidNoArgumentSuperConstructorCall"/>
+        <module name="MagicNumber">
+            <property name="ignoreNumbers" value="-1, 0, 1, 2, -1, 10, 99, 256, 1024, 8192"/>
+        </module>
+
+        <!-- Final modifiers -->
+        <module name="FinalClass"/>
+        <module name="ConstantName">
+            <property name="format" value="[A-Z_][A-Z0-9_]*"/>
+        </module>
+
+        <!-- Exception handling -->
+        <module name="IllegalType"/>
+        <module name="CovariantEquals"/>
+        
+        <!-- Blocks -->
+        <module name="NeedBraces">
+            <property name="tokens" value="LITERAL_IF, LITERAL_ELSE, LITERAL_FOR, LITERAL_WHILE, LITERAL_DO"/>
+        </module>
+
+        <module name="EmptyBlock">
+            <property name="option" value="TEXT"/>
+        </module>
+    </module>
+</module>

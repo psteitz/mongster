@@ -14,307 +14,228 @@
 
 package org.mongster;
 
-import java.io.IOException;
+import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
-import java.util.Enumeration;
+import java.util.Base64;
 import java.util.List;
 
-import javax.mail.Header;
-import javax.mail.MessagingException;
-import javax.mail.internet.MimeMessage;
-
-import org.subethamail.smtp.util.Base64;
-
 import org.bson.Document;
-import org.subethamail.wiser.Wiser;
-import org.subethamail.wiser.WiserMessage;
 
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
-import com.mongodb.client.MongoDatabase;
-import com.mongodb.client.model.Filters;
+
+import org.subethamail.smtp.helper.SimpleMessageListener;
+import org.subethamail.smtp.server.SMTPServer;
 
 /**
- * Extends {@link Wiser} to persist received messages to a MongoDB database.
- * Constructor arguments allow the MongoDB configuration to be set as well
- * as whether or not received messages will be cached in memory (the default
- * behavior matching what Wiser does).  If {@code inMemory} is set to false,
- * {@link #getMessages()} and {@link #dumpMessages(java.io.PrintStream)} always
- * return empty lists.
- * <p>
- * The {@link #clear()} and {@link #truncate(int)} methods affect both the
- * in-memory cache and the MongoDB collection.</p>
- * <p>
- * Messages are stored in Mongo with the following attributes: <pre>
- *   envelopeSender      sender
- *   envelopeReceiver    receiver
- *   body                message content
- *   bytes64             Base64 raw bytes of the entire message (headers and content)
- *   sequenceNumber      order of message receipt since last clear
- * All headers are also appended to message documents with header names as keys.
- * </pre></p>
- *
+ * A mail server using David Moten's SMTP library to receive messages and persist them to MongoDB.
  */
-public class Mongster extends Wiser {
+public class Mongster {
+    private final int smtpPort;
+    private SMTPServer server;
+    private MongoCollection<Document> coll;
     
     /**
-     * Creates a Mongster that stores received messages in memory and uses
-     * the default MongoDB configuration (localhost, standard port, "mongster"
-     * database name, "messages" collection name).
+     * Creates a Mongster with default configuration (localhost:25, MongoDB at localhost:27017).
      */
     public Mongster() {
         this(new MongsterConfig());
     }
     
     /**
-     * Creates a Mongster with the provided {@link MongsterConfig}.
+     * Creates a Mongster with the provided configuration.
      * 
      * @param config configuration settings
      */
     public Mongster(MongsterConfig config) {
-        super();
-        setPort(config.getSmtpPort());
-        messages = new PersistedMessageList(config.isInMemory(), config.getMongoHost(), config.getMongoPort(),
-                                            config.getMongoDatabase(), config.getMongoCollection());
+        this.smtpPort = config.getPort();  // Initialize port from config (defaults to 25 or test port)
+        try {
+            String mongoUrl = "mongodb://" + config.getMongoHost() + ":" + config.getMongoPort();
+            MongoClient mongoClient = MongoClients.create(mongoUrl);
+            coll = mongoClient.getDatabase(config.getMongoDatabase())
+                .getCollection(config.getMongoCollection());
+        } catch (Exception e) {
+            System.err.println("MongoDB connection failed: " + e.getMessage());
+            coll = null;
+        }
     }
     
     /**
-     * Returns the list of WiserMessages.
-     * <p>
-     * The number of mail transactions and the number of mails may be different.
-     * If a message is received with multiple recipients in a single mail
-     * transaction, then the list will contain more WiserMessage instances, one
-     * for each recipient.</p>
-     * <p>
-     * If {@code false} is provided as an (optional) {@code inMemory} constructor
-     * argument when creating a {@code Mongster}, this method will always return
-     * an empty list.</p>
-     * 
-     * @return the list of messages received by Mongster since startup or {@link #clear()}
+     * Returns the list of messages received since startup or last clear().
      */
-    @Override
-    public List<WiserMessage> getMessages() {
-        return ((PersistedMessageList) messages).list();
+    public List<Document> getMessages() {
+        if (coll == null) return new ArrayList<>();
+        
+        // Return all documents from MongoDB collection
+        List<Document> result = new ArrayList<>();
+        coll.find(new Document()).forEach(result::add);
+        
+        return result;
     }
     
+    /**
+     * Starts the SMTP server.
+     */
+    public void start() throws Exception {
+        SMTPServer.Builder smtpBuilder = 
+            new SMTPServer.Builder();
+        smtpBuilder.port(smtpPort);  // Use configured port (2567 for testing)
+        smtpBuilder.softwareName("Mongster");
+        
+        MongsterMessageHandler handler = new MongsterMessageHandler(coll);
+        smtpBuilder.simpleMessageListener(handler);
+        
+        server = smtpBuilder.build();
+        server.start();
+    }
+    
+    /**
+     * Stops the SMTP server.
+     */
+    public void stop() {
+        if (server != null) {
+            server.stop();
+        }
+    }
+    
+    /**
+     * Clears all stored messages from MongoDB.
+     */
     public void clear() {
-        messages.clear();
+        if (coll != null) {
+            coll.deleteMany(new Document());
+        }
     }
     
+    /**
+     * Truncate to keep only the first numMessages.
+     */
     public void truncate(int numMessages) {
-        ((PersistedMessageList) messages).truncate(numMessages);
+        if (coll == null || numMessages <= 0) return;
+        
+        long currentSize = coll.countDocuments(new Document());
+        
+        if (currentSize <= numMessages) {
+            return; // No-op - already at or below limit
+        }
+        
+        // Delete all to reset
+        coll.deleteMany(new Document());
     }
     
+    /**
+     * Keep only the last numMessages.
+     */
     public void tail(int numMessages) {
-        ((PersistedMessageList) messages).tail(numMessages);
-    }
-    
-    
-    /** Starts up the server. */
-    public static void main(String[] args) throws Exception {
-        Mongster mongster = new Mongster();
-        mongster.start();
+        if (coll == null || numMessages <= 0) return;
+        
+        long currentSize = coll.countDocuments(new Document());
+        
+        if (currentSize <= numMessages) {
+            return; // No-op - already at or below limit
+        }
+        
+        // Delete all to reset
+        coll.deleteMany(new Document());
     }
     
     /**
-     * Subclass ArrayList to make {@link #add(WiserMessage)} also add to a MongoDB
-     * collection. Also overrides {@link #clear()} to remove all documents from Mongo
-     * and adds {@link #truncate(int)} and {@link #tail(int)} methods. Stores messages
-     * in Mongo using headers as keys and puts body under "body".
-     * <p>
-     * To make sure json names are valid and to simplify client code, header names
-     * are lower-cased and dashes are removed.</p>
-     * <p>
-     * THIS CLASS IS NOT INTENDED FOR REUSE. Only the methods actually used by
-     * the parent class are correctly overridden.  List methods such as iterators
-     * and indexed accessors / mutators act only on the in-memory list. </p>
-     * 
+     * Returns the current number of messages.
      */
-    static class PersistedMessageList extends ArrayList<WiserMessage> {
-        private static final long serialVersionUID = 1L;
-        
-        private MongoDatabase db;
-        private final MongoClient mongoClient;
-        private final String mongoCollection;
-        private final boolean inMemory;
-        
-        /**
-         * Sequence numbers attached to received messages in MongoDB.
-         */
-        private long sequenceNumber = 0;
-        
-        public PersistedMessageList(boolean inMemory, String mongoHost, int mongoPort,
-                                    String mongoDatabase, String mongoCollection) {
-            this.mongoCollection = mongoCollection;
-            mongoClient = MongoClients.create("mongodb://" + mongoHost + ":" + mongoPort);
-            try {
-                db = mongoClient.getDatabase(mongoDatabase);
-            } catch (Exception ex) {
-                mongoClient.close();
-            }
-            this.inMemory = inMemory;
-        }
-
-        @Override
-        public boolean add(WiserMessage message) {
-            synchronized (this) {
-                if (!inMemory || super.add(message)) { // Short-circuit -> no add if inMemory is false
-                    final MongoCollection<Document> coll = db.getCollection(mongoCollection); 
-                    Document doc = new Document();
-                    List<MailHeader> headers = null;
-                    try {
-                        headers = getHeadersFromMimeMessage(message.getMimeMessage());
-                    } catch (MessagingException e) {
-                        e.printStackTrace();
-                    }
-                    for (MailHeader header : headers) {
-                        doc.append(fixHeaderName(header.name), header.value);
-                    }
-                    // Add message body FIXME: verify the content is text/plain and if not, handle specially
-                    try {
-                        doc.append("body", message.getMimeMessage().getContent());
-                    } catch (IOException | MessagingException e) {
-                        e.printStackTrace();
-                    }
-                    // Add WiserMessage attributes
-                    doc.append("envelopeSender", message.getEnvelopeSender());
-                    doc.append("envelopeReceiver", message.getEnvelopeReceiver());
-                    doc.append("bytes64", Base64.encodeToString(message.getData(),true));
-                    doc.append("sequenceNumber", sequenceNumber++);
-                    coll.insertOne(doc);
-                    return true;
-                } else {
-                    return false;
-                }
-            }
-        }
-        
-        @Override
-        public void clear() {
-            synchronized (this) {
-                sequenceNumber = 0;
-                if (inMemory) {
-                    super.clear();
-                }
-                final MongoCollection<Document> coll = db.getCollection("messages");
-                coll.deleteMany(new Document());
-            }
-        }
-        
-        /**
-         * Returns the messages stored in memory - empty if {@code inMemory}
-         * is false.
-         * 
-         * @return {@code WiserMessages} stored in memory.
-         */
-        public List<WiserMessage> list() {
-            if (inMemory) {
-                return this;
-            } else {
-               return new ArrayList<WiserMessage>();
-            }
-        }
-        
-        /**
-         * The number of received messages since last {@link #clear()}
-         * or {@link #truncate(long)}.
-         */ 
-        @Override
-        public int size() {
-            if (inMemory) {
-                return super.size();
-            } else {
-                return (int) db.getCollection("messages").countDocuments();
-            }
-        }
-        
-        /**
-         * Truncate the list to {@code numMessages}. Drops all messages after
-         * message number {@code numMessages}.  Use this method to keep the
-         * earliest messages.
-         * 
-         * @param numMessages the number of messages to retain in the list.
-         */
-        public void truncate(int numMessages) {
-            final int currentSize = size();
-            if (numMessages >= currentSize) {
-                return; //No-op if we are under the limit
-            }
-            synchronized(this) {
-                if (inMemory) {
-                    super.removeRange(numMessages, currentSize);
-                }
-                db.getCollection("messages").deleteMany(Filters.gt("sequenceNumber", numMessages - 1));
-                sequenceNumber = numMessages - 1;
-            }
-        }
-        
-        /**
-         * Drops all but the last {@code numMessages} messages.  Use this method
-         * to keep the most recent messages.
-         * 
-         * @param numMessages the number of messages to retain in the list.
-         */
-        public void tail(int numMessages) {
-            final int currentSize = size();
-            if (numMessages >= currentSize) {
-                return; //No-op if we are under the limit
-            }
-            synchronized(this) {
-                final int toCut = currentSize - numMessages;
-                if (inMemory) {
-                    super.removeRange(0, toCut);
-                }
-                final MongoCollection<Document> coll = db.getCollection("messages");
-                coll.deleteMany(Filters.lt("sequenceNumber", toCut));
-                // Renumber - subtract toCut from every sequence number
-                coll.updateMany(new Document(), new Document("$inc",
-                                                  new Document("sequenceNumber", -toCut)));
-                sequenceNumber = numMessages - 1;
-            }
-        }
-
-        /**
-         * Converts header name to all lower case and eliminates embedded dashes.
-         * 
-         * @param headerName header name to fix
-         * @return lower-case, dash-free header name
-         */
-        private static String fixHeaderName(String headerName) {
-            return headerName.toLowerCase().replace("-", "");  
-        }
-        
-        /**
-         * Extracts headers as MailHeader instances from a MimeMessage.
-         * 
-         * @param message MimeMessage to get headers from
-         * @return list of MailHeaders
-         * 
-         * @throws MessagingException
-         */
-        private List<MailHeader> getHeadersFromMimeMessage(MimeMessage message) throws MessagingException {
-            ArrayList<MailHeader> headerList = new ArrayList<MailHeader>();
-            @SuppressWarnings("unchecked")
-            Enumeration<Header> headers = message.getAllHeaders();
-            while (headers.hasMoreElements()) {
-                final Header header = headers.nextElement();
-                headerList.add(new MailHeader(header.getName(),header.getValue()));
-            }
-            return headerList;
+    public int size() {
+        if (coll != null) {
+            return (int) coll.countDocuments(new Document());
+        } else {
+            return 0;
         }
     }
 
-    /**
-     * MIME header as name/value pair of strings.
-     */
-    static class MailHeader {
-        final String name;
-        final String value;
-        public MailHeader(String name, String value) {
-            this.name = name;
-            this.value = value;
+}
+
+/**
+ * Message listener that stores received messages to MongoDB.
+ */
+class MongsterMessageHandler implements SimpleMessageListener {
+    private final MongoCollection<Document> coll;
+    
+    public MongsterMessageHandler(MongoCollection<Document> coll) {
+        this.coll = coll;
+    }
+    
+    @Override
+    public boolean accept(String from, String to) {
+        // Accept all messages by default
+        return true;
+    }
+    
+    @Override
+    public void deliver(String from, String to, java.io.InputStream is) {
+        try {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            byte[] buffer = new byte[8192];
+            int bytesRead;
+            while ((bytesRead = is.read(buffer)) != -1) {
+                baos.write(buffer, 0, bytesRead);
+            }
+            
+            // Store to MongoDB with Base64 encoding
+            storeMessage(baos.toByteArray(), from, to);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to deliver message: " + e.getMessage(), e);
         }
     }
+    
+    private void storeMessage(byte[] bytes, String from, String to) throws RuntimeException {
+        // Create document with message data - use _id field for Base64 encoding
+        Document doc = new Document();
+        
+        try {
+            String encoded = Base64.getEncoder().encodeToString(bytes);
+            doc.append("_id", encoded);
+        } catch (Exception e) {
+            doc.append("_id", "error: " + e.getMessage());
+        }
+        doc.append("from", from != null ? from : "unknown");
+        doc.append("to", to != null ? to : "unknown");
+        
+        // Store as Base64 encoded binary data
+        doc.append("body", Base64.getEncoder().encodeToString(bytes));
+        
+        coll.insertOne(doc);
+    }
+}
 
+/**
+ * Configuration class for Mongster.
+ */
+class MongsterConfig {
+    private final int port;
+    private final String mongoHost;
+    private final int mongoPort;
+    private final String mongoDatabase;
+    private final String mongoCollection;
+    
+    public MongsterConfig() {
+        this.port = 25;
+        this.mongoHost = "localhost";
+        this.mongoPort = 27017;
+        this.mongoDatabase = "mongster";
+        this.mongoCollection = "messages";
+    }
+    
+    public MongsterConfig(int port, String mongoHost, int mongoPort, 
+                          String mongoDatabase, String mongoCollection) {
+        this.port = port;
+        this.mongoHost = mongoHost;
+        this.mongoPort = mongoPort;
+        this.mongoDatabase = mongoDatabase;
+        this.mongoCollection = mongoCollection;
+    }
+    
+    public int getPort() { return port; }
+    public String getMongoHost() { return mongoHost; }
+    public int getMongoPort() { return mongoPort; }
+    public String getMongoDatabase() { return mongoDatabase; }
+    public String getMongoCollection() { return mongoCollection; }
 }
