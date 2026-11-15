@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Logs
+*.log
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE settings
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+
+# Vite cache
+.cache/
+dist/
+
+# Test coverage
+coverage/
+
+# OS files
+.DS_Store
+Thumbs.db

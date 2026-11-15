@@ -1,0 +1,56 @@
+# ============================================================================
+# Docker Compose for Mongster Development
+# ============================================================================
+# Provides MongoDB via testcontainers and easy local development
+# ============================================================================
+
+version: '3.8'
+
+services:
+  mongster:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    container_name: mongster
+    ports:
+      - "2567:2567"  # SMTP port (use non-privileged port by default)
+    environment:
+      - MONGODB_HOST=mongodb
+      - MONGODB_PORT=27017
+      - MONGODB_DATABASE=mongster
+      - MONGODB_COLLECTION=messages
+      - SMTP_PORT=2567
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
+  mongodb:
+    image: mongo:7.0
+    container_name: mongster_mongodb
+    ports:
+      - "27018:27017"  # Map to non-privileged port
+    environment:
+      - MONGO_INITDB_DATABASE=mongster
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=changeme
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh --quiet --eval "$$" || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+
+volumes:
+  mongodb_data:
+    driver: local

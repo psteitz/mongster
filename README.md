@@ -6,7 +6,7 @@ also enables unit tests or reports to use MongoDB queries to verify that message
 There are actually two little projects living here:
 
 * Mongster server - a Java project containing the Wiser extension
-* MongsterVue - a MEAN app for managing and viewing contents of a Mongster server
+* MonsgterView - a React application for managing and viewing contents of a mongsterServer
 
 ## Building ##
 To build the mongster server, run `mvn clean package` from `/mongsterServer` to get a jar suitable for inclusion
@@ -20,8 +20,8 @@ MongoDB 7.0 server in a Docker container, so no locally running MongoDB is neede
 Run the tests with `mvn test` from `/mongsterServer`.  Because `mvn package` and `mvn install` also run the tests,
 use `-DskipTests` with them if Docker is not available.
 
-As a MEAN app, there is no special build step required for MongsterVue. See info below,
-however, on requirements for the node environment to run MongsterVue.
+As an ESM (ES Modules) app, there is no special build step required for MonsgterView. See the setup info below,
+however, on requirements for the node environment to run MonsgterView.
 
 ## Running ##
 ### Mongster Server ###
@@ -46,7 +46,7 @@ constructor takes an optional `MongsterConfig` argument that allows all of these
 to be configured.  There is also an `inMemory` config parameter that allows in-memory
 storage of messages (as `WiserMessages`) to be turned on / off.  The default is on.
 
-### MongsterVue ###
+### MonsgterView ###
 The following instructions are for Ubuntu Linux, though modulo the  [this issue](https://github.com/joeferner/node-java/issues/90#issuecomment-45613235), they should in general work for Mac OSX using brew in place of apt-get.  
 
 1. Install and start MongoDB (see the [MongoDB installation docs](https://www.mongodb.com/docs/manual/installation/))
@@ -56,7 +56,7 @@ The following instructions are for Ubuntu Linux, though modulo the  [this issue]
    curl -fsSL https://deb.nodesource.com/setup_24.x | sudo -E bash -
    sudo apt-get install -y nodejs
    ```
-3. Install MongsterVue dependencies (from `/mongsterVue` relative to the top-level directory of a clone of this repo).
+3. Install MonsgterView dependencies (from `/monsgterView` relative to the top-level directory of a clone of this repo).
    The `java` module is built from source and links against whichever JVM `$JAVA_HOME` points to at install time, so
    `$JAVA_HOME` must point to a JDK 17+ (the native bridge is unusable with the Mongster jar otherwise) and `g++`, `make`
    and `python3` are needed.  All dependency versions are pinned exactly in `package.json`; there is no separate bower step.
@@ -65,9 +65,9 @@ The following instructions are for Ubuntu Linux, though modulo the  [this issue]
    npm install
    ```
 
-4. Install Mongster (from `/mongsterServer`)
+4. Install mongsterServer (from `/mongsterServer`)
 
-   The goal here is just to copy a standalone Mongster jar to `/monsgsterVue.`  That can be from a release or built from the Java sources.  To build from Java sources:
+   The goal here is just to copy a standalone Mongster jar to where it can be accessed.  That can be from a release or built from the Java sources.  To build from Java sources:
    
    Make sure `$JAVA_HOME` is set to point to a JDK 17+.  If maven is not installed, install it:
    
@@ -75,35 +75,112 @@ The following instructions are for Ubuntu Linux, though modulo the  [this issue]
    sudo apt-get install maven
    ```
    
-   Now build the Mongster standalone jar and copy it to `/mongsterVue`
+   Now build the Mongster standalone jar and copy it where needed.
   
    ```
+   cd mongsterServer
    mvn clean compile assembly:single
-   cp target/*.jar ../mongsterVue
    ```
 
-5. Start MongoVue (from `/mongsterVue`)
+5. Start MonsgterView (from `/monsgterView`)
 
    ```
-   sudo node app.js
+   cd monsgterView
+   npm install
+   npm run api    # Terminal 1: Start API server
+   npm run dev    # Terminal 2: Start React frontend
    ```
-The `sudo` in the launch command is necessary because MongoVue starts a Mongster server, which by default binds to port 25, which is a privileged port.  [FIXME] (https://github.com/psteitz/mongster/issues/2) to avoid this ugliness.   
-   
-MongsterVue can be configured with environment variables: `PORT` (web port, default 3000), `SMTP_PORT` (default 25, so a
+The `java` module needs `$JAVA_HOME` to point to a JDK 17+.  All dependency versions are pinned exactly in `package.json`.  
+
+MonsgterView can be configured with environment variables: `PORT` (API server port, default 3001), `SMTP_PORT` (default 25, so a
 non-privileged port can be used without `sudo`), `MONGO_URL` (default `mongodb://localhost:27017/mongster`) and `MONGSTER_JAR`
-(path to the standalone Mongster jar, default the jar in `/mongsterVue`).  The jar in `/mongsterVue` must be built from the
-current sources to work with current MongoDB servers.
+(path to the standalone Mongster jar).
 
-If you point a browser at http://localhost:3000 you should see a screen with an empty messages table.  To get some messages to appear, you need to direct some outbound SMTP messages to port 25 on the local host.  To stop the server (sic) kill the process.
+If you point a browser at http://localhost:3000 you should see a screen with an empty messages table.  To get some messages to appear, you need to direct some outbound SMTP messages to port 25 on the local host.
 
-#### MongsterVue tests ####
-Run `npm test` from `/mongsterVue`.  The tests cover the Express routes, the AngularJS controller, the rendered page (in jsdom)
+#### MonsgterView tests ####
+Run `npm test` from `/monsgterView`.  The tests cover the React components, API client, the rendered page (in happy-dom)
 and the Mongoose model.  Like the server tests, they use Testcontainers to start a MongoDB container, so Docker is required
 (or set `MONGO_URL`, e.g. `mongodb://localhost:27017`, to use an existing MongoDB server).  The end-to-end test, which sends mail
 through the real Mongster server via the Java bridge, needs a standalone jar: build it with `mvn compile assembly:single` in
 `/mongsterServer` (the test is skipped if the jar is not found; set `MONGSTER_JAR` to use a different jar).  It also needs the
 same JDK 17+ that `$JAVA_HOME` pointed to when `npm install` built the `java` module; a mismatch causes an
 `UnsupportedClassVersionError` when the jar is loaded.
+
+
+### MonsgterView ###
+MonsgterView is a React application.  
+
+#### Features ####
+- Auto-refresh every 30 seconds
+- Displays message details: date, subject, to/cc/from fields, replyto, and body
+- "Clear" button to clear stored messages
+- Mobile-responsive design
+- Comprehensive test suite with Vitest
+
+#### Setup ####
+To run MonsgterView:
+
+1. Install Node.js 22.22.2 or later (same functionality requirements)
+
+   ```
+   curl -fsSL https://deb.nodesource.com/setup_24.x | sudo -E bash -
+   sudo apt-get install -y nodejs
+   ```
+
+2. Navigate to the MonsgterView directory and install dependencies:
+
+   ```
+   cd monsgterView
+   npm install
+   ```
+
+3. Start the API server (connects to mongsterServer):
+
+   ```
+   npm run api
+   ```
+
+4. Start the React frontend in development mode:
+
+   ```
+   npm run dev
+   ```
+
+Alternatively, use Docker for easier deployment:
+
+   ```
+   cd monsgterView
+   docker-compose up --build
+   ```
+The frontend will be available at `http://localhost:3000` and the API server at `http://localhost:3001`.
+
+#### Running Tests ####
+To run all tests for MonsgterView:
+
+   ```
+   cd monsgterView
+
+   ```
+   cd monsgterView
+   npm test
+   ```
+
+This runs the full test suite including unit tests, integration tests, and E2E tests using Vitest with happy-dom.
+
+To see code coverage:
+
+   ```
+   npm run test:coverage
+   ```
+
+#### API Endpoints ####
+The MonsgterView application connects to mongsterServer and exposes these REST endpoints:
+
+- `GET /api/messages` - Retrieves all messages from MongoDB  
+- `POST /api/clear` - Clears stored messages via mongsterServer.clear() method
+
+See [API.md](monsgterView/API.md) for detailed API documentation.
 
 ## Collaboration ##
 

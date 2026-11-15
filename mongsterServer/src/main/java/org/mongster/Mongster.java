@@ -37,7 +37,7 @@ public class Mongster {
     private MongoCollection<Document> coll;
     
     /**
-     * Creates a Mongster with default configuration (localhost:25, MongoDB at localhost:27017).
+     * Creates a Mongster with default configuration (localhost:2567, MongoDB at localhost:27017).
      */
     public Mongster() {
         this(new MongsterConfig());
@@ -49,7 +49,7 @@ public class Mongster {
      * @param config configuration settings
      */
     public Mongster(MongsterConfig config) {
-        this.smtpPort = config.getPort();  // Initialize port from config (defaults to 25 or test port)
+        this.smtpPort = config.getPort();  // Initialize port from config (defaults to 2567 for testing)
         try {
             String mongoUrl = "mongodb://" + config.getMongoHost() + ":" + config.getMongoPort();
             MongoClient mongoClient = MongoClients.create(mongoUrl);
@@ -217,7 +217,7 @@ class MongsterConfig {
     private final String mongoCollection;
     
     public MongsterConfig() {
-        this.port = 25;
+        this.port = 2567;
         this.mongoHost = "localhost";
         this.mongoPort = 27017;
         this.mongoDatabase = "mongster";

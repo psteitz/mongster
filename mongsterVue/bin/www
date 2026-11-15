@@ -1,7 +1,0 @@
-#!/usr/bin/env node
-var debug = require('debug')('mongsterVue');
-var app = require('../app');
-
-app.start().then(function(running) {
-  debug('Express server listening on port ' + running.server.address().port);
-});

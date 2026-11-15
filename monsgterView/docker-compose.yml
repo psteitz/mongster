@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  monger-view-api:
+    build:
+      context: .
+      target: production
+    ports:
+      - "3001:3001"
+    environment:
+      - MONGO_URL=mongodb://mongo:27017/mongster
+      - NODE_ENV=production
+    depends_on:
+      - mongo
+    networks:
+      - monsgter-network
+
+  mongo:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    volumes:
+      - monger-data:/data/db
+    environment:
+      - MONGO_INITDB_DATABASE=mongster
+    networks:
+      - monsgter-network
+
+  # Frontend served by API server (Vite dev/prod)
+  monger-view-frontend-dev:
+    build:
+      context: .
+      target: development
+    ports:
+      - "3000:3000"
+    environment:
+      - MONGO_URL=mongodb://mongo:27017/mongster
+    depends_on:
+      - monger-view-api
+      - mongo
+    networks:
+      - monsgter-network
+
+volumes:
+  monger-data:
+
+networks:
+  monsgter-network:
+    driver: bridge

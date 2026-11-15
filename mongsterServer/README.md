@@ -4,7 +4,7 @@ A mail server that receives messages via SMTP and stores them in MongoDB.
 
 ## Features
 
-- Receives emails via SMTP on configurable port (default: 25)
+- Receives emails via SMTP on configurable port (**default: 2567**)
 - Stores messages in MongoDB collection
 - Provides API to retrieve, clear, truncate, and tail messages  
 - Uses jakarta.mail for Java 17 compatibility
@@ -54,14 +54,14 @@ public class App {
             .withExposedPorts(27017);
         mongoDb.start();
 
-        // Create and start Mongster
+        // Create and start Mongster (uses default port 2567)
         Mongster mongster = new Mongster(new MongsterConfig(
-            2567,                    // SMTP port (use >1024 for non-root)
-            mongoDb.getHost(),
-            mongoDb.getMappedPort(27017),  // MongoDB host and port
+            "localhost",             // MongoDB host
+            mongoDb.getMappedPort(27017),  // MongoDB port
             "mongster",              // Database name
             "messages"               // Collection name
         ));
+
         mongster.start();
 
         // ... use Mongster ...
@@ -80,10 +80,10 @@ import org.mongster.MongsterConfig;
 
 public class App {
     public static void main(String[] args) throws Exception {
+        // Default port 2567 - no root privileges needed!
         Mongster mongster = new Mongster(new MongsterConfig(
-            2567,
-            "localhost",   // MongoDB host (set to your actual host)
-            27017,         // MongoDB port
+            "localhost",   // MongoDB host
+            27017,         // MongoDB port  
             "mongster",    // Database name
             "messages"     // Collection name
         ));
@@ -95,6 +95,18 @@ public class App {
 }
 ```
 
+To use a different port (e.g., 2500):
+
+```java
+new Mongster(new MongsterConfig(
+    2500,                    // Custom SMTP port
+    "localhost",             // MongoDB host
+    27017,                   // MongoDB port
+    "mongster",              // Database name
+    "messages"               // Collection name
+));
+```
+
 ## API Usage
 
 ```java
@@ -102,8 +114,17 @@ import org.mongster.Mongster;
 import org.bson.Document;
 import java.util.List;
 
-// Create instance (use defaults or custom config)
-Mongster mongster = new Mongster();  // or with MongsterConfig
+// Create instance (uses default config with port 2567)
+Mongster mongster = new Mongster();
+
+// Or create with custom port
+Mongster mongster = new Mongster(new MongsterConfig(
+    2500,                    // Custom SMTP port
+    "localhost",             // MongoDB host
+    27017,                   // MongoDB port
+    "mongster",              // Database name
+    "messages"               // Collection name
+));
 
 // Start the server
 mongster.start();
@@ -208,13 +229,21 @@ All quality checks are enforced during `mvn verify`:
 </dependency>
 ```
 
-## Note on Port 25
+## Default SMTP Port (Best Practice)
 
-By default, Mongster listens on port 25. However, binding to ports `<1024` requires root privileges on Linux. For development and testing, use a higher port like `2567`:
+Mongster defaults to port **2567** instead of the traditional port 25 for these reasons:
+
+1. **No root privileges required** - Ports >= 1024 don't require elevated permissions on Linux/macOS
+2. **Avoids conflicts** - Doesn't compete with system mail services (Postfix, Sendmail, etc.)
+3. **Development-friendly** - Can run alongside other applications without port conflicts
+
+To use a different port, pass it to the constructor:
 
 ```java
-new MongsterConfig(2567, "localhost", 27017, "mongster", "messages")
+new Mongster(new MongsterConfig(2500, ...))
 ```
+
+If you specifically need port 25 (production SMTP server), ensure no other service is using it.
 
 ## Development Workflow
 
@@ -242,8 +271,9 @@ new MongsterConfig(2567, "localhost", 27017, "mongster", "messages")
 - Check network/firewall for MongoDB port access
 
 ### SMTP Port Already in Use
-- Change the SMTP port in `MongsterConfig` constructor
-- Or stop any existing SMTP server on that port
+- Default port 2567 is unlikely to be in use, but if it is:
+  - Change the port: `new Mongster(new MongsterConfig(2501, ...))`
+  - Stop any existing SMTP server on that port
 
 ### Checkstyle/PMD Failures  
 - Review error messages for specific violations
@@ -256,3 +286,22 @@ Apache License 2.0 - See LICENSE file for details.
 ## Contributing
 
 Contributions are welcome! Please follow the code style rules and run `mvn verify` before submitting.
+
+## Container Support
+
+Mongster supports Docker for easy deployment:
+
+```bash
+# Build image from source
+mvn clean package
+docker build -t mongster .
+
+# Run with default settings (port 2567)
+docker run -d --name mongster -p 2567:2567 mongster
+
+# Or use docker-compose for local development
+docker-compose up -d
+```
+
+See `DOCKER.md` for detailed containerization documentation.
+

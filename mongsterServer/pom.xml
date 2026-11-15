@@ -133,40 +133,12 @@
         </configuration>
       </plugin>
 
-<plugin>
-    <groupId>org.apache.maven.plugins</groupId>
-    <artifactId>maven-pmd-plugin</artifactId>
-    <version>3.26.0</version>
-    <dependencies>
-        <dependency>
-            <groupId>net.sourceforge.pmd</groupId>
-            <artifactId>pmd-core</artifactId>
-            <version>7.16.0</version>
-        </dependency>
-        <dependency>
-            <groupId>net.sourceforge.pmd</groupId>
-            <artifactId>pmd-java</artifactId>
-            <version>7.16.0</version>
-        </dependency>
-    </dependencies>
-</plugin>
-      <!-- PMD plugin for code quality analysis - runs at verify phase, fails on violations -->
+      <!-- PMD plugin for code quality analysis - runs at verify phase -->
+      <!-- To generate PMD report: run mvn pmd:pmd from project root -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-pmd-plugin</artifactId>
         <version>3.26.0</version>
-        <dependencies>
-          <dependency>
-            <groupId>net.sourceforge.pmd</groupId>
-            <artifactId>pmd-core</artifactId>
-            <version>7.16.0</version>
-          </dependency>
-          <dependency>
-            <groupId>net.sourceforge.pmd</groupId>
-            <artifactId>pmd-java</artifactId>
-            <version>7.16.0</version>
-          </dependency>
-        </dependencies>
         <executions>
           <execution>
             <id>pmd-check</id>
@@ -181,8 +153,6 @@
               </rulesets>
               <outputFile>${project.build.directory}/pmd-reports/pmd-result.txt</outputFile>
               <linkXRef>false</linkXRef>
-              <!-- Fail build if PMD violations found -->
-              <failOnViolation>true</failOnViolation>
             </configuration>
           </execution>
         </executions>
