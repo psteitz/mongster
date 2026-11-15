@@ -20,6 +20,8 @@ MongoDB 7.0 server in a Docker container, so no locally running MongoDB is neede
 Run the tests with `mvn test` from `/mongsterServer`.  Because `mvn package` and `mvn install` also run the tests,
 use `-DskipTests` with them if Docker is not available.
 
+For containerization and Docker-related instructions, see [monsgterView/docs/DOCKER.md](monsgterView/docs/DOCKER.md).
+
 As an ESM (ES Modules) app, there is no special build step required for MonsgterView. See the setup info below,
 however, on requirements for the node environment to run MonsgterView.
 
@@ -146,12 +148,15 @@ To run MonsgterView:
    npm run dev
    ```
 
-Alternatively, use Docker for easier deployment:
+Alternatively, use Docker for easier deployment.
+
+For full containerization instructions, see [monsgterView/docs/DOCKER.md](monsgterView/docs/DOCKER.md).  Briefly:
 
    ```
    cd monsgterView
    docker-compose up --build
    ```
+
 The frontend will be available at `http://localhost:3000` and the API server at `http://localhost:3001`.
 
 #### Running Tests ####
